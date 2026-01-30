@@ -25,7 +25,14 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .cell-input { width: 100%; height: 100%; text-align: center; background: transparent; outline: none; }
-        .print-container { width: 100%; font-family: 'Arial', sans-serif; background-color: white; }
+        .print-container { 
+            width: 100%; 
+            font-family: 'Arial', sans-serif; 
+            background-color: white;
+            /* Yazıcıda arkaplan renklerinin çıkmasını zorla */
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact;
+        }
         
         /* Fade in animasyonu */
         @keyframes fadeIn {
@@ -40,6 +47,10 @@
         .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Tablo hücre stilleri */
+        .th-cell { font-size: 10px; padding: 2px; border: 1px solid #9ca3af; text-align: center; }
+        .td-cell { border: 1px solid #9ca3af; }
     </style>
 </head>
 <body>
@@ -59,6 +70,8 @@
         const SHIFTS_PER_DAY = 6;
         const MAX_CONSECUTIVE_GAP_SHIFTS = 5; 
         const MONTH_NAMES = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+        // 0: Pazar, 1: Pzt ...
+        const DAY_INITIALS = ["P", "P", "S", "Ç", "P", "C", "C"]; 
 
         // --- Yeni Personel Kartı Bileşeni ---
         const StaffItem = ({ name, onSave, onDelete }) => {
@@ -130,20 +143,11 @@
 
         function App() {
             const [staff, setStaff] = useState(DEFAULT_STAFF);
-            
-            // Formdaki (Yeni oluşturulacak) tarih seçimleri
             const [inputYear, setInputYear] = useState(2026);
             const [inputMonth, setInputMonth] = useState(1); // Şubat
-
-            // Hafızadaki (Yüklü/Oluşturulmuş) listenin "gerçek" tarihi
             const [loadedDate, setLoadedDate] = useState(null); 
-            
-            // TÜM KAYITLI PROJELER (LocalStorage'dan gelir)
             const [savedProjects, setSavedProjects] = useState([]);
-            
-            // Silme onayı için hangi projenin seçildiğini tutan state
             const [projectToDelete, setProjectToDelete] = useState(null);
-
             const [daysInMonth, setDaysInMonth] = useState(28);
             const [constraints, setConstraints] = useState({}); 
             const [schedule, setSchedule] = useState({}); 
@@ -153,7 +157,6 @@
             const tableRef = useRef(null);
             const fileInputRef = useRef(null);
 
-            // LocalStorage'dan projeleri çek
             useEffect(() => {
                 const localData = localStorage.getItem('nobet_projects');
                 if (localData) {
@@ -170,18 +173,27 @@
                 }
             }, []);
 
-            // Formdaki Ay/Yıl değişince gün sayısını güncelle
             useEffect(() => {
                 const days = new Date(inputYear, inputMonth + 1, 0).getDate();
                 setDaysInMonth(days);
             }, [inputYear, inputMonth]);
 
-            // İstatistikleri her schedule değişiminde güncelle
             useEffect(() => {
                 calculateStats(schedule);
             }, [schedule, staff]); 
 
-            // --- LocalStorage Yardımcıları ---
+            // --- Yardımcılar ---
+            const isWeekend = (year, month, day) => {
+                const d = new Date(year, month, day);
+                const dayIdx = d.getDay();
+                return dayIdx === 0 || dayIdx === 6;
+            };
+
+            const getDayNameInitial = (year, month, day) => {
+                const d = new Date(year, month, day);
+                return DAY_INITIALS[d.getDay()];
+            };
+
             const saveToLocal = (data) => {
                 const id = `${data.year}-${data.month}`; 
                 const newProject = { 
@@ -232,15 +244,12 @@
                 setConstraints(project.constraints || {});
                 setSchedule(project.schedule || {});
                 setLoadedDate({ month: project.month, year: project.year });
-                
                 setInputMonth(project.month);
                 setInputYear(project.year);
                 setDaysInMonth(project.daysInMonth || new Date(project.year, project.month + 1, 0).getDate());
-
                 setActiveTab('result');
             };
 
-            // --- Diğer Fonksiyonlar ---
             const getDaysArray = () => Array.from({ length: daysInMonth }, (_, i) => i + 1);
             
             const getResultDaysArray = () => {
@@ -340,7 +349,6 @@
 
                 for (let day = 1; day <= targetDays; day++) {
                     let assignedToday = [...tempSchedule[day]];
-                    
                     if (assignedToday.length >= SHIFTS_PER_DAY) continue;
 
                     let candidates = staff.filter(person => {
@@ -357,22 +365,16 @@
                     candidates.sort((a, b) => {
                         const stateA = nurseState[a];
                         const stateB = nurseState[b];
-
-                        if (stateA.shiftCount !== stateB.shiftCount) {
-                            return stateA.shiftCount - stateB.shiftCount;
-                        }
-
+                        if (stateA.shiftCount !== stateB.shiftCount) return stateA.shiftCount - stateB.shiftCount;
                         const willViolateGapA = (day - stateA.lastShiftDay === 2);
                         const willViolateGapB = (day - stateB.lastShiftDay === 2);
                         const scoreA = (willViolateGapA && stateA.gapViolations >= MAX_CONSECUTIVE_GAP_SHIFTS) ? 1000 : 0;
                         const scoreB = (willViolateGapB && stateB.gapViolations >= MAX_CONSECUTIVE_GAP_SHIFTS) ? 1000 : 0;
-
                         if (scoreA !== scoreB) return scoreA - scoreB;
                         return (stateA.lastShiftDay - stateB.lastShiftDay); 
                     });
 
                     const needed = SHIFTS_PER_DAY - assignedToday.length;
-                    
                     for (let i = 0; i < needed; i++) {
                         if (candidates[i]) {
                             const p = candidates[i];
@@ -398,7 +400,6 @@
 
                 setSchedule(newSchedule);
                 setLoadedDate({ month: targetMonth, year: targetYear });
-                
                 saveToLocal({
                     staff,
                     year: targetYear,
@@ -407,7 +408,6 @@
                     constraints,
                     schedule: newSchedule
                 });
-                
                 setActiveTab('result');
             };
 
@@ -459,7 +459,6 @@
                         if (data.schedule) {
                             setSchedule(data.schedule);
                         }
-                        
                         saveToLocal(data);
                         alert("Proje başarıyla yüklendi!");
                     } catch (error) {
@@ -538,12 +537,16 @@
                 const newStaff = staff.filter((_, i) => i !== index);
                 setStaff(newStaff);
             };
-            const getCellColor = (val) => {
+            const getCellColor = (val, isWeekend) => {
+                // Hafta sonu ise ve hücre boşsa (default), gri yap
+                if (!val && isWeekend) return 'bg-gray-100';
+                
                 if (val === '24') return 'bg-white text-black font-bold'; 
                 if (val === 'N') return 'bg-blue-100 text-blue-800 font-bold';
                 if (val === 'X') return 'bg-gray-100 text-red-500 font-bold';
                 if (val === 'İ') return 'bg-gray-50 text-gray-500 font-bold';
-                return 'hover:bg-gray-50';
+                
+                return isWeekend ? 'bg-gray-100' : 'hover:bg-gray-50';
             };
 
             // --- Sayfalar ---
@@ -602,7 +605,6 @@
                                             </div>
                                         </button>
                                         
-                                        {/* Çöp Kutusu Butonu */}
                                         {projectToDelete !== proj.id && (
                                             <button 
                                                 onClick={(e) => handleDeleteClick(e, proj.id)}
@@ -613,7 +615,6 @@
                                             </button>
                                         )}
 
-                                        {/* Silme Onay Kutucuğu */}
                                         {projectToDelete === proj.id && (
                                             <div className="absolute top-2 right-2 bg-white border border-gray-200 p-3 shadow-xl rounded-lg z-20 flex flex-col items-end animate-fade-in" onClick={(e) => e.stopPropagation()}>
                                                 <p className="text-xs text-gray-700 font-bold mb-2 whitespace-nowrap">Silinsin mi?</p>
@@ -664,7 +665,6 @@
                             <span>Personel Listesi ({staff.length} Kişi)</span>
                             <span className="text-xs text-gray-400 font-normal">Düzenlemek için isme tıklayın</span>
                         </h3>
-                        {/* max-h sınırını kaldırdım ve grid kolon sayısını artırdım */}
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 pr-1 custom-scroll">
                             {staff.map((p, i) => (
                                 <StaffItem 
@@ -723,22 +723,31 @@
                         <table className="min-w-full text-xs border-collapse border border-gray-300">
                             <thead>
                                 <tr className="bg-gray-100">
-                                    <th className="p-2 min-w-[150px] text-left sticky left-0 bg-gray-100 z-10 shadow-sm border border-gray-300">Personel</th>
-                                    {getDaysArray().map(d => (
-                                        <th key={d} className="p-1 w-8 text-center border border-gray-300">{d}</th>
-                                    ))}
+                                    <th className="th-cell sticky left-0 bg-gray-100 z-10 w-48 text-left pl-2">Personel</th>
+                                    {getDaysArray().map(d => {
+                                        const isWe = isWeekend(inputYear, inputMonth, d);
+                                        return (
+                                            <th key={d} className={`th-cell w-8 ${isWe ? 'bg-gray-200' : ''}`}>
+                                                <div className="flex flex-col">
+                                                    <span>{d}</span>
+                                                    <span className="text-[9px] text-gray-500">{getDayNameInitial(inputYear, inputMonth, d)}</span>
+                                                </div>
+                                            </th>
+                                        )
+                                    })}
                                 </tr>
                             </thead>
                             <tbody>
                                 {staff.map(person => (
                                     <tr key={person}>
-                                        <td className="p-2 font-medium sticky left-0 bg-white z-10 border border-gray-300 shadow-sm whitespace-nowrap">{person}</td>
+                                        <td className="td-cell p-1 font-medium sticky left-0 bg-white z-10 whitespace-nowrap">{person}</td>
                                         {getDaysArray().map(d => {
                                             const val = constraints[`${person}_${d}`];
+                                            const isWe = isWeekend(inputYear, inputMonth, d);
                                             return (
                                                 <td 
                                                     key={d} 
-                                                    className={`cursor-pointer select-none transition-colors border border-gray-300 ${getCellColor(val)}`}
+                                                    className={`td-cell cursor-pointer select-none transition-colors ${getCellColor(val, isWe)}`}
                                                     onClick={() => toggleConstraint(person, d)}
                                                 >
                                                     <div className="w-full h-8 flex items-center justify-center">
@@ -798,15 +807,25 @@
                                     </h3>
                                 </div>
 
-                                <table className="w-full text-xs border-collapse border border-gray-400 text-black">
+                                <table className="w-full text-xs border-collapse border border-gray-400 text-black table-fixed">
                                     <thead>
                                         <tr className="bg-gray-100">
-                                            <th className="p-3 w-48 text-left border border-gray-400 font-bold text-black">PERSONEL ADI SOYADI</th>
-                                            {getResultDaysArray().map(d => (
-                                                <th key={d} className="p-1 w-8 text-center border border-gray-400 font-bold text-black">{d}</th>
-                                            ))}
-                                            <th className="p-1 w-12 text-center border border-gray-400 bg-gray-200 text-black">Nöbet</th>
-                                            <th className="p-1 w-12 text-center border border-gray-400 bg-gray-200 text-black">Saat</th>
+                                            <th className="th-cell w-48 text-left pl-2 bg-gray-100 font-bold text-black">PERSONEL ADI SOYADI</th>
+                                            {getResultDaysArray().map(d => {
+                                                const displayYear = loadedDate ? loadedDate.year : inputYear;
+                                                const displayMonth = loadedDate ? loadedDate.month : inputMonth;
+                                                const isWe = isWeekend(displayYear, displayMonth, d);
+                                                return (
+                                                    <th key={d} className={`th-cell w-8 font-bold text-black ${isWe ? 'bg-gray-200' : ''}`}>
+                                                        <div className="flex flex-col">
+                                                            <span>{d}</span>
+                                                            <span className="text-[8px] font-normal text-gray-600">{getDayNameInitial(displayYear, displayMonth, d)}</span>
+                                                        </div>
+                                                    </th>
+                                                )
+                                            })}
+                                            <th className="th-cell w-12 bg-gray-200 text-black">Nöbet</th>
+                                            <th className="th-cell w-12 bg-gray-200 text-black">Saat</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -814,8 +833,12 @@
                                             const personStats = stats[person] || {shifts:0, totalHours:0};
                                             return (
                                                 <tr key={person} className="bg-white">
-                                                    <td className="p-2 font-semibold border border-gray-400 whitespace-nowrap text-black">{person}</td>
+                                                    <td className="td-cell p-1 font-semibold border border-gray-400 whitespace-nowrap text-black">{person}</td>
                                                     {getResultDaysArray().map(d => {
+                                                        const displayYear = loadedDate ? loadedDate.year : inputYear;
+                                                        const displayMonth = loadedDate ? loadedDate.month : inputMonth;
+                                                        const isWe = isWeekend(displayYear, displayMonth, d);
+                                                        
                                                         const key = `${person}_${d}`;
                                                         const val = schedule[key];
                                                         let displayVal = "";
@@ -826,7 +849,7 @@
                                                         else if (val === 'X') { displayVal = "X"; textColor = "text-gray-400"; }
 
                                                         return (
-                                                            <td key={d} className="p-0 border border-gray-400 text-center relative h-8">
+                                                            <td key={d} className={`td-cell p-0 text-center relative h-8 ${isWe ? 'bg-gray-100' : ''}`}>
                                                                 <input 
                                                                     className={`cell-input ${textColor}`}
                                                                     value={displayVal}
@@ -854,26 +877,26 @@
                                                             </td>
                                                         );
                                                     })}
-                                                    <td className="text-center font-bold bg-gray-100 text-black border border-gray-400">{personStats.shifts}</td>
-                                                    <td className="text-center font-bold bg-gray-100 text-black border border-gray-400">{personStats.totalHours}</td>
+                                                    <td className="td-cell text-center font-bold bg-gray-100 text-black">{personStats.shifts}</td>
+                                                    <td className="td-cell text-center font-bold bg-gray-100 text-black">{personStats.totalHours}</td>
                                                 </tr>
                                             );
                                         })}
                                         {/* Toplam Satırı */}
                                         <tr className="bg-gray-200 font-bold text-black">
-                                            <td className="p-2 text-right border border-gray-400">GÜNLÜK TOPLAM:</td>
+                                            <td className="td-cell p-1 text-right">GÜNLÜK TOPLAM:</td>
                                             {getResultDaysArray().map(d => {
                                                 let count = 0;
                                                 staff.forEach(p => {
                                                     if(schedule[`${p}_${d}`] === '24') count++;
                                                 });
                                                 return (
-                                                    <td key={d} className={`text-center p-1 border border-gray-400 ${count !== 6 ? 'text-red-600' : 'text-green-900'}`}>
+                                                    <td key={d} className={`td-cell text-center ${count !== 6 ? 'text-red-600' : 'text-green-900'}`}>
                                                         {count}
                                                     </td>
                                                 )
                                             })}
-                                            <td colSpan="2" className="border border-gray-400"></td>
+                                            <td colSpan="2" className="td-cell"></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -917,3 +940,5 @@
     </script>
 </body>
 </html>
+
+
