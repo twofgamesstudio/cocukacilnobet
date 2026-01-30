@@ -22,13 +22,16 @@
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
         .cell-input { width: 100%; height: 100%; text-align: center; background: transparent; outline: none; }
+        
+        /* Yazıcı Dostu Konteyner */
         .print-container { 
             width: 100%; 
-            font-family: 'Arial', sans-serif; 
+            font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; 
             background-color: white;
+            color: #1f2937;
             -webkit-print-color-adjust: exact; 
             print-color-adjust: exact;
         }
@@ -37,16 +40,31 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-        .custom-scroll::-webkit-scrollbar { width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        
+        .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        .th-cell { font-size: 10px; padding: 2px; border: 1px solid #9ca3af; text-align: center; }
-        .td-cell { border: 1px solid #9ca3af; }
+        /* Gelişmiş Tablo Stilleri */
+        .th-cell { 
+            font-size: 11px; 
+            padding: 4px 2px; 
+            border: 1px solid #64748b; 
+            text-align: center; 
+            font-weight: 800; 
+        }
+        .td-cell { 
+            border: 1px solid #94a3b8; 
+            font-size: 11px; 
+            height: 34px; 
+            font-weight: 600;
+        }
+        
+        /* Renk Paleti */
+        .header-bg { background-color: #0f766e; color: white; } 
+        .weekend-bg { background-color: #ffedd5; } 
     </style>
 </head>
 <body>
@@ -55,13 +73,14 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
+        // Varsayılan listeyi Türkçe kurallara göre sıralı başlat
         const DEFAULT_STAFF = [
-            "BUSE KORKMAZ", "BÜŞRA ERKAN", "BİLAL ŞEKERCİ", "CAN PAKER",
-            "EMİNE SARI", "EMİNE HANIM YILDIZ", "ELİF NUR DUMLUPINAR", "ESRA ÇETİN",
-            "HACER ALTANAY CAN", "KIYMET KARAKIŞ", "MEHMET NESİM SATILMIŞ", "MELTEM SUNTAY",
-            "MEVLÜDE ÇOBAN", "NUR FATMA GÖK", "NAZMİYE İNAL DÖNMEZ", "NURCAN YILMAZ",
-            "ÖZNUR TANGUR", "CAHİDE AKIN"
-        ];
+            "BİLAL ŞEKERCİ", "BUSE KORKMAZ", "BÜŞRA ERKAN", "CAHİDE AKIN",
+            "CAN PAKER", "ELİF NUR DUMLUPINAR", "EMİNE HANIM YILDIZ", "EMİNE SARI", 
+            "ESRA ÇETİN", "HACER ALTANAY CAN", "KIYMET KARAKIŞ", "MEHMET NESİM SATILMIŞ", 
+            "MELTEM SUNTAY", "MEVLÜDE ÇOBAN", "NAZMİYE İNAL DÖNMEZ", "NUR FATMA GÖK", 
+            "NURCAN YILMAZ", "ÖZNUR TANGUR"
+        ].sort((a, b) => a.localeCompare(b, 'tr'));
 
         const SHIFTS_PER_DAY = 6;
         const MAX_CONSECUTIVE_GAP_SHIFTS = 5; 
@@ -69,7 +88,7 @@
         const DAY_INITIALS = ["P", "P", "S", "Ç", "P", "C", "C"]; 
 
         const currentYear = new Date().getFullYear();
-        const YEAR_OPTIONS = Array.from({length: 7}, (_, i) => currentYear - 1 + i);
+        const YEAR_OPTIONS = Array.from({length: 15}, (_, i) => currentYear - 2 + i);
 
         // --- Personel Kartı ---
         const StaffItem = ({ name, onSave, onDelete }) => {
@@ -80,7 +99,7 @@
 
             const handleSave = () => {
                 if (tempName.trim()) {
-                    onSave(tempName.toUpperCase());
+                    onSave(name, tempName.toUpperCase()); 
                     setIsEditing(false);
                 }
             };
@@ -97,33 +116,31 @@
 
             if (isEditing) {
                 return (
-                    <div className="flex items-center space-x-1 bg-blue-50 p-1 rounded shadow-md border border-blue-200 transform scale-105 transition z-10 h-8">
+                    <div className="flex items-center space-x-1 bg-teal-50 p-1 rounded shadow-md border border-teal-300 transform scale-105 transition z-10 h-9 ring-2 ring-teal-200">
                         <input 
                             type="text" 
                             value={tempName} 
                             onChange={(e) => setTempName(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            className="flex-1 p-0.5 border border-blue-300 rounded text-xs uppercase focus:outline-none focus:ring-1 focus:ring-blue-400 w-full"
+                            className="flex-1 p-1 border border-teal-300 rounded text-xs uppercase focus:outline-none w-full font-bold text-teal-800"
                             autoFocus
                             placeholder="İSİM"
                         />
-                        <button onClick={handleSave} className="bg-green-500 text-white w-5 h-5 rounded flex items-center justify-center hover:bg-green-600 transition shadow-sm"><i className="fas fa-check text-[10px]"></i></button>
-                        <button onClick={handleCancel} className="bg-gray-300 text-gray-600 w-5 h-5 rounded flex items-center justify-center hover:bg-gray-400 transition shadow-sm"><i className="fas fa-times text-[10px]"></i></button>
+                        <button onClick={handleSave} className="bg-green-500 text-white w-6 h-6 rounded flex items-center justify-center hover:bg-green-600 transition shadow-sm"><i className="fas fa-check text-[10px]"></i></button>
+                        <button onClick={handleCancel} className="bg-gray-400 text-white w-6 h-6 rounded flex items-center justify-center hover:bg-gray-500 transition shadow-sm"><i className="fas fa-times text-[10px]"></i></button>
                     </div>
                 );
             }
 
             return (
-                <div className="flex items-center space-x-1 bg-white border border-gray-200 p-1 rounded hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition group h-8">
-                    <div className="flex-1 flex items-center cursor-pointer min-w-0" onClick={() => setIsEditing(true)} title="Düzenlemek için tıklayın">
-                        <div className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 mr-1.5 flex-shrink-0 group-hover:bg-blue-100 group-hover:text-blue-500">
-                            <i className="fas fa-user text-[10px]"></i>
-                        </div>
-                        <span className="text-xs font-medium text-gray-700 truncate select-none">{name}</span>
+                <div className="flex items-center space-x-2 bg-white border border-gray-200 p-1.5 rounded hover:bg-teal-50 hover:border-teal-300 hover:shadow-md transition group h-9 cursor-pointer" onClick={() => setIsEditing(true)}>
+                    <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 mr-1 flex-shrink-0 group-hover:bg-teal-100 group-hover:text-teal-600">
+                        <i className="fas fa-user text-xs"></i>
                     </div>
-                    <div className="flex space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <button onClick={() => setIsEditing(true)} className="text-blue-400 hover:text-blue-600 p-1 rounded hover:bg-blue-100"><i className="fas fa-pen text-[10px]"></i></button>
-                        <button onClick={onDelete} className="text-red-400 hover:text-red-600 p-1 rounded hover:bg-red-100"><i className="fas fa-trash text-[10px]"></i></button>
+                    <span className="text-xs font-bold text-gray-700 truncate select-none flex-1">{name}</span>
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-100"><i className="fas fa-pen text-[10px]"></i></button>
+                        <button onClick={(e) => { e.stopPropagation(); onDelete(name); }} className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100"><i className="fas fa-trash text-[10px]"></i></button>
                     </div>
                 </div>
             );
@@ -182,7 +199,17 @@
 
             const saveToLocal = (data) => {
                 const id = `${data.year}-${data.month}`; 
-                const newProject = { ...data, id, timestamp: new Date().toISOString() };
+                const calculatedStats = {}; 
+                data.staff.forEach(p => {
+                    let s = 0;
+                    if(data.schedule) {
+                        for(let d=1; d<=data.daysInMonth; d++) {
+                            if(data.schedule[`${p}_${d}`] === '24') s++;
+                        }
+                    }
+                    calculatedStats[p] = { shifts: s };
+                });
+                const newProject = { ...data, id, timestamp: new Date().toISOString(), stats: calculatedStats };
                 setSavedProjects(prev => {
                     const others = prev.filter(p => p.id !== id);
                     const newList = [newProject, ...others].sort((a, b) => {
@@ -195,7 +222,7 @@
             };
 
             const handleDeleteClick = (e, id) => { e.stopPropagation(); setProjectToDelete(id); };
-            
+            const cancelDeleteProject = (e) => { e.stopPropagation(); setProjectToDelete(null); };
             const confirmDeleteProject = (e, id) => {
                 e.stopPropagation();
                 setSavedProjects(prev => {
@@ -204,18 +231,14 @@
                     return newList;
                 });
                 if (loadedDate && `${loadedDate.year}-${loadedDate.month}` === id) {
-                    setLoadedDate(null);
-                    setSchedule({});
-                    setConstraints({});
-                    setActiveTab('settings');
+                    setLoadedDate(null); setSchedule({}); setConstraints({}); setActiveTab('settings');
                 }
                 setProjectToDelete(null);
             };
 
-            const cancelDeleteProject = (e) => { e.stopPropagation(); setProjectToDelete(null); };
-
             const loadFromSaved = (project) => {
-                setStaff(project.staff);
+                // Yüklerken Türkçe karakterlere göre sırala
+                setStaff(project.staff.sort((a, b) => a.localeCompare(b, 'tr')));
                 setConstraints(project.constraints || {});
                 setSchedule(project.schedule || {});
                 setLoadedDate({ month: project.month, year: project.year });
@@ -226,7 +249,6 @@
             };
 
             const getDaysArray = () => Array.from({ length: daysInMonth }, (_, i) => i + 1);
-            
             const getResultDaysArray = () => {
                 if (!loadedDate) return getDaysArray();
                 const days = new Date(loadedDate.year, loadedDate.month + 1, 0).getDate();
@@ -244,26 +266,17 @@
                 setConstraints(newConstraints);
             };
 
-            const clearConstraints = () => {
-                setConstraints({});
-                setShowClearConfirm(false);
-            };
+            const clearConstraints = () => { setConstraints({}); setShowClearConfirm(false); };
 
             const calculateStats = (currentSchedule) => {
-                const currentDays = loadedDate 
-                    ? new Date(loadedDate.year, loadedDate.month + 1, 0).getDate()
-                    : daysInMonth;
+                const currentDays = loadedDate ? new Date(loadedDate.year, loadedDate.month + 1, 0).getDate() : daysInMonth;
                 const newStats = {};
                 staff.forEach(person => {
-                    let totalHours = 0;
-                    let shifts = 0;
-                    let gapViolations = 0;
-                    let lastShiftDay = -10;
+                    let totalHours = 0; let shifts = 0; let gapViolations = 0; let lastShiftDay = -10;
                     for (let day = 1; day <= currentDays; day++) {
                         const key = `${person}_${day}`;
                         if (currentSchedule[key] === '24') {
-                            shifts++;
-                            totalHours += 24;
+                            shifts++; totalHours += 24;
                             if (day - lastShiftDay === 2) gapViolations++;
                             lastShiftDay = day;
                         }
@@ -281,64 +294,76 @@
                 return array;
             };
 
-            // --- YENİLENEN NÖBET ALGORİTMASI (HEDEF SİSTEMİ) ---
             const generateSchedule = () => {
                 const targetYear = inputYear;
                 const targetMonth = inputMonth;
                 const targetDays = daysInMonth;
                 const newSchedule = { ...constraints };
                 
-                // 1. ADIM: Hedef (Kota) Belirleme
+                let previousMonthStats = {};
+                let previousMonthAvg = 0;
+                let prevM = targetMonth - 1;
+                let prevY = targetYear;
+                if(prevM < 0) { prevM = 11; prevY -= 1; }
+                const prevId = `${prevY}-${prevM}`;
+                const prevProject = savedProjects.find(p => p.id === prevId);
+
+                if (prevProject && prevProject.stats) {
+                    let totalPrevShifts = 0; let countPrevStaff = 0;
+                    Object.keys(prevProject.stats).forEach(p => {
+                        totalPrevShifts += prevProject.stats[p].shifts;
+                        countPrevStaff++;
+                    });
+                    if (countPrevStaff > 0) previousMonthAvg = totalPrevShifts / countPrevStaff;
+                    previousMonthStats = prevProject.stats;
+                }
+
                 const nurseAvailability = {};
                 let totalFixedShifts = 0;
                 let standardStaffList = [];
 
                 staff.forEach(p => {
-                    // İzin günlerini say ('İ' harfi)
                     let leaveCount = 0;
                     for(let d=1; d<=targetDays; d++){
                         if(constraints[`${p}_${d}`] === 'İ') leaveCount++;
                     }
-
-                    // Kurala göre hedef nöbet sayısı belirle
                     let target = null;
                     if (leaveCount >= 10) target = 5;
                     else if (leaveCount >= 5) target = 7;
                     else if (leaveCount >= 3) target = 8;
                     
+                    let historyScore = 0;
+                    if (prevProject && previousMonthStats[p]) {
+                        historyScore = previousMonthAvg - previousMonthStats[p].shifts;
+                    }
+
                     if (target !== null) {
-                        // Özel kuralı olanlar
-                        nurseAvailability[p] = { targetShifts: target, isStandard: false };
+                        nurseAvailability[p] = { targetShifts: target, isFixed: true, historyScore: 0 };
                         totalFixedShifts += target;
                     } else {
-                        // Standart (İzni olmayan veya az olan)
                         standardStaffList.push(p);
-                        nurseAvailability[p] = { isStandard: true }; // Target sonra hesaplanacak
+                        nurseAvailability[p] = { isFixed: false, historyScore: historyScore };
                     }
                 });
 
-                // 2. ADIM: Standart Personel İçin Hedef Hesaplama
                 const totalShiftsNeeded = targetDays * SHIFTS_PER_DAY;
                 const remainingShiftsNeeded = Math.max(0, totalShiftsNeeded - totalFixedShifts);
                 
                 if (standardStaffList.length > 0) {
-                    const baseTarget = Math.floor(remainingShiftsNeeded / standardStaffList.length);
-                    let remainder = remainingShiftsNeeded % standardStaffList.length;
+                    const baseTarget = Math.floor(remainingShiftsNeeded / standardStaffList.length); 
+                    let remainder = remainingShiftsNeeded % standardStaffList.length; 
                     
-                    // Kalan nöbetleri rastgele dağıtmak için karıştır
-                    standardStaffList = shuffleArray(standardStaffList);
+                    standardStaffList = shuffleArray(standardStaffList); 
+                    // DÜZELTME: Borcu ÇOK olan (historyScore > 0) daha fazla nöbet tutmalı.
+                    // historyScore = Avg - Current. Eğer 10-8=2 ise 2 borcu var. Büyük olan öne.
+                    standardStaffList.sort((a, b) => nurseAvailability[b].historyScore - nurseAvailability[a].historyScore);
                     
-                    standardStaffList.forEach(p => {
-                        let myTarget = baseTarget;
-                        if (remainder > 0) {
-                            myTarget += 1;
-                            remainder--;
-                        }
-                        nurseAvailability[p].targetShifts = myTarget;
+                    standardStaffList.forEach((p, index) => {
+                        if (index < remainder) nurseAvailability[p].targetShifts = baseTarget + 1;
+                        else nurseAvailability[p].targetShifts = baseTarget;
                     });
                 }
 
-                // 3. ADIM: Kesin Nöbetleri ('N') İşle
                 let tempSchedule = {}; 
                 for (let day = 1; day <= targetDays; day++) {
                     tempSchedule[day] = [];
@@ -351,15 +376,9 @@
                     });
                 }
 
-                // 4. ADIM: Personel Durum Takibi (State)
                 let nurseState = {};
                 staff.forEach(p => {
-                    nurseState[p] = {
-                        shiftCount: 0,
-                        lastShiftDay: -10,
-                        gapViolations: 0
-                    };
-                    // Sabit nöbetleri say
+                    nurseState[p] = { shiftCount: 0, lastShiftDay: -10, gapViolations: 0 };
                     for(let d=1; d<=targetDays; d++){
                          if(newSchedule[`${p}_${d}`] === '24') {
                              nurseState[p].shiftCount++;
@@ -369,7 +388,6 @@
                     }
                 });
 
-                // 5. ADIM: Ana Dağıtım Döngüsü
                 for (let day = 1; day <= targetDays; day++) {
                     let assignedToday = [...tempSchedule[day]];
                     if (assignedToday.length >= SHIFTS_PER_DAY) continue;
@@ -380,37 +398,22 @@
                         if (constraint === 'X' || constraint === 'İ') return false;
                         if (newSchedule[`${person}_${day-1}`] === '24') return false;
                         if (constraints[`${person}_${day+1}`] === 'N') return false; 
-                        
-                        // Hedefini doldurmuşsa (veya aşmışsa) önceliği düşür ama tamamen eleme (yedek lazım olabilir)
-                        // Ancak katı bir dağıtım istiyoruz, bu yüzden sadece target'a ulaşamayanları alalım önce.
-                        // Sonra gerekirse havuzu genişletiriz. Şimdilik düz filtre.
                         return true;
                     });
 
                     candidates = shuffleArray(candidates);
 
-                    // SIRALAMA: Hedefe en uzak olan en önde
                     candidates.sort((a, b) => {
-                        const stateA = nurseState[a];
-                        const stateB = nurseState[b];
-                        const infoA = nurseAvailability[a];
-                        const infoB = nurseAvailability[b];
-
-                        // Kriter 1: Hedefine ne kadar uzak? (Target - Current). Büyük olan öne.
+                        const stateA = nurseState[a]; const stateB = nurseState[b];
+                        const infoA = nurseAvailability[a]; const infoB = nurseAvailability[b];
                         const remA = infoA.targetShifts - stateA.shiftCount;
                         const remB = infoB.targetShifts - stateB.shiftCount;
-
-                        if (remA !== remB) return remB - remA; // Kalan ihtiyacı çok olan önce gelir
-
-                        // Kriter 2: Gün aşırı ceza puanı
+                        if (Math.abs(remA - remB) > 0.1) return remB - remA;
                         const willViolateGapA = (day - stateA.lastShiftDay === 2);
                         const willViolateGapB = (day - stateB.lastShiftDay === 2);
                         const scoreA = (willViolateGapA && stateA.gapViolations >= MAX_CONSECUTIVE_GAP_SHIFTS) ? 1000 : 0;
                         const scoreB = (willViolateGapB && stateB.gapViolations >= MAX_CONSECUTIVE_GAP_SHIFTS) ? 1000 : 0;
-
                         if (scoreA !== scoreB) return scoreA - scoreB;
-                        
-                        // Kriter 3: En eski nöbet tutan
                         return (stateA.lastShiftDay - stateB.lastShiftDay); 
                     });
 
@@ -436,14 +439,7 @@
 
                 setSchedule(newSchedule);
                 setLoadedDate({ month: targetMonth, year: targetYear });
-                saveToLocal({
-                    staff,
-                    year: targetYear,
-                    month: targetMonth,
-                    daysInMonth: targetDays,
-                    constraints,
-                    schedule: newSchedule
-                });
+                saveToLocal({ staff, year: targetYear, month: targetMonth, daysInMonth: targetDays, constraints, schedule: newSchedule });
                 setActiveTab('result');
             };
 
@@ -471,7 +467,7 @@
                 reader.onload = (e) => {
                     try {
                         const data = JSON.parse(e.target.result);
-                        if (data.staff) setStaff(data.staff);
+                        if (data.staff) setStaff(data.staff.sort((a, b) => a.localeCompare(b, 'tr')));
                         if (data.year && data.month !== undefined) {
                             setLoadedDate({ month: data.month, year: data.year });
                             setInputMonth(data.month);
@@ -493,8 +489,8 @@
                     const originalTable = tableRef.current.querySelector('.print-container');
                     if (!originalTable) return;
                     const clone = originalTable.cloneNode(true);
-                    const targetWidth = 1400; 
-                    clone.style.position = 'fixed'; clone.style.top = '-10000px'; clone.style.left = '0'; clone.style.width = `${targetWidth}px`; clone.style.zIndex = '-1000'; clone.style.backgroundColor = '#ffffff'; clone.style.padding = '20px'; 
+                    const targetWidth = 1600; 
+                    clone.style.position = 'fixed'; clone.style.top = '-10000px'; clone.style.left = '0'; clone.style.width = `${targetWidth}px`; clone.style.zIndex = '-1000'; clone.style.backgroundColor = '#ffffff'; clone.style.padding = '40px'; 
                     const originalInputs = originalTable.querySelectorAll('input');
                     const clonedInputs = clone.querySelectorAll('input');
                     originalInputs.forEach((origInput, index) => {
@@ -519,70 +515,70 @@
                 }
             };
 
-            const handleStaffUpdate = (index, newName) => {
-                const newStaff = [...staff];
-                newStaff[index] = newName.toUpperCase();
+            const handleStaffUpdate = (oldName, newName) => {
+                let newStaff = staff.map(s => s === oldName ? newName : s);
+                // İsmi güncelledikten sonra tekrar sırala (Türkçe karakter destekli)
+                newStaff.sort((a, b) => a.localeCompare(b, 'tr'));
                 setStaff(newStaff);
             };
 
-            const addStaff = () => setStaff([...staff, "YENİ PERSONEL"]);
-            const removeStaff = (index) => {
-                const newStaff = staff.filter((_, i) => i !== index);
-                setStaff(newStaff);
+            const addStaff = () => {
+                const newStaff = [...staff, "YENİ PERSONEL"];
+                setStaff(newStaff); // Sıralama yapmıyoruz, kullanıcı düzenleyince sıralanır
             };
+            
+            const removeStaff = (nameToRemove) => {
+                setStaff(staff.filter(s => s !== nameToRemove));
+            };
+            
             const getCellColor = (val, isWeekend) => {
-                if (!val && isWeekend) return 'bg-gray-100';
-                if (val === '24') return 'bg-white text-black font-bold'; 
-                if (val === 'N') return 'bg-blue-100 text-blue-800 font-bold';
+                if (!val && isWeekend) return 'bg-orange-50';
+                if (val === '24') return 'bg-white text-black font-extrabold'; 
+                if (val === 'N') return 'bg-teal-50 text-teal-800 font-bold';
                 if (val === 'X') return 'bg-gray-100 text-red-500 font-bold';
                 if (val === 'İ') return 'bg-gray-50 text-gray-500 font-bold';
-                return isWeekend ? 'bg-gray-100' : 'hover:bg-gray-50';
+                return isWeekend ? 'bg-orange-50' : 'hover:bg-teal-50';
             };
 
             const SettingsPanel = () => (
-                <div className="bg-white p-6 rounded-lg shadow-md mb-6 animate-fade-in">
-                    <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 mb-6 animate-fade-in">
+                    <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4 border-b border-gray-100 pb-4">
                         <div>
-                            <h2 className="text-xl font-bold text-gray-700 flex items-center">
-                                <i className="fas fa-home mr-2"></i> Ana Menü
-                            </h2>
+                            <h2 className="text-xl font-bold text-gray-800 flex items-center"><i className="fas fa-home mr-2 text-teal-600"></i> Ana Menü</h2>
                             <p className="text-sm text-gray-500 mt-1">Nöbet programı oluşturun veya kayıtlı verileri yönetin.</p>
                         </div>
                         <div className="flex space-x-2">
                             <input type="file" accept=".json" ref={fileInputRef} style={{display:'none'}} onChange={loadProject} />
-                            <button onClick={() => fileInputRef.current.click()} className="bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 shadow flex items-center transition"><i className="fas fa-upload mr-2"></i> Veri Yükle (JSON)</button>
+                            <button onClick={() => fileInputRef.current.click()} className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 shadow-md flex items-center transition transform hover:scale-105"><i className="fas fa-upload mr-2"></i> Veri Yükle</button>
                             {schedule && Object.keys(schedule).length > 0 && loadedDate && (
-                                <button onClick={saveProject} className="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 shadow flex items-center transition"><i className="fas fa-save mr-2"></i> Veri Kaydet (JSON)</button>
+                                <button onClick={saveProject} className="bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 shadow-md flex items-center transition transform hover:scale-105"><i className="fas fa-save mr-2"></i> Veri Kaydet</button>
                             )}
                         </div>
                     </div>
-
                     {savedProjects.length > 0 && (
-                        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl shadow-sm animate-fade-in">
-                            <h3 className="font-bold text-gray-700 mb-4 flex items-center">
-                                <i className="fas fa-folder-open mr-2 text-yellow-500"></i> Kayıtlı Dönemler
-                            </h3>
+                        <div className="mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl shadow-inner animate-fade-in">
+                            <h3 className="font-bold text-gray-700 mb-4 flex items-center"><i className="fas fa-folder-open mr-2 text-yellow-500"></i> Kayıtlı Dönemler</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                 {savedProjects.map((proj) => (
                                     <div key={proj.id} className="relative group">
-                                        <button onClick={() => loadFromSaved(proj)} className="w-full bg-white border border-gray-200 p-4 rounded-lg shadow-sm hover:shadow-md hover:border-blue-300 transition text-left">
+                                        <button onClick={() => loadFromSaved(proj)} className="w-full bg-white border border-gray-200 p-4 rounded-xl shadow-sm hover:shadow-lg hover:border-teal-400 transition text-left duration-200">
                                             <div className="flex justify-between items-center mb-2">
                                                 <span className="font-bold text-lg text-gray-800">{MONTH_NAMES[proj.month]} {proj.year}</span>
-                                                <i className="fas fa-chevron-right text-gray-400 group-hover:text-blue-500"></i>
+                                                <i className="fas fa-chevron-right text-gray-400 group-hover:text-teal-500"></i>
                                             </div>
-                                            <div className="text-xs text-gray-500">
-                                                <span className="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded mr-2">{new Date(proj.timestamp).toLocaleDateString("tr-TR")}</span>
+                                            <div className="text-xs text-gray-500 font-medium">
+                                                <span className="inline-block bg-teal-100 text-teal-800 px-2 py-0.5 rounded mr-2">{new Date(proj.timestamp).toLocaleDateString("tr-TR")}</span>
                                                 {proj.staff ? proj.staff.length : 0} Personel
                                             </div>
                                         </button>
                                         {projectToDelete !== proj.id && (
-                                            <button onClick={(e) => handleDeleteClick(e, proj.id)} className="absolute top-2 right-2 bg-red-100 text-red-500 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-red-200 z-10 shadow-sm"><i className="fas fa-trash-alt text-xs"></i></button>
+                                            <button onClick={(e) => handleDeleteClick(e, proj.id)} className="absolute top-3 right-3 bg-red-50 text-red-400 w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition hover:bg-red-500 hover:text-white shadow-sm"><i className="fas fa-trash-alt text-xs"></i></button>
                                         )}
                                         {projectToDelete === proj.id && (
                                             <div className="absolute top-2 right-2 bg-white border border-gray-200 p-3 shadow-xl rounded-lg z-20 flex flex-col items-end animate-fade-in" onClick={(e) => e.stopPropagation()}>
                                                 <p className="text-xs text-gray-700 font-bold mb-2 whitespace-nowrap">Silinsin mi?</p>
                                                 <div className="flex gap-2">
-                                                    <button onClick={cancelDeleteProject} className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded hover:bg-gray-300">İptal</button>
+                                                    <button onClick={cancelDeleteProject} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded hover:bg-gray-200">İptal</button>
                                                     <button onClick={(e) => confirmDeleteProject(e, proj.id)} className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Evet</button>
                                                 </div>
                                             </div>
@@ -592,99 +588,80 @@
                             </div>
                         </div>
                     )}
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Yıl</label>
-                            <select value={inputYear} onChange={(e)=>setInputYear(parseInt(e.target.value))} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                                {YEAR_OPTIONS.map(y => (<option key={y} value={y}>{y}</option>))}
-                            </select>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Yıl</label>
+                            <div className="relative">
+                                <select value={inputYear} onChange={(e)=>setInputYear(parseInt(e.target.value))} className="block w-full appearance-none bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-teal-500">{YEAR_OPTIONS.map(y => (<option key={y} value={y}>{y}</option>))}</select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"><i className="fas fa-chevron-down text-xs"></i></div>
+                            </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700">Ay</label>
-                            <select value={inputMonth} onChange={(e)=>setInputMonth(parseInt(e.target.value))} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
-                                {MONTH_NAMES.map((m,i)=>(<option key={i} value={i}>{m}</option>))}
-                            </select>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">Ay</label>
+                            <div className="relative">
+                                <select value={inputMonth} onChange={(e)=>setInputMonth(parseInt(e.target.value))} className="block w-full appearance-none bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-teal-500">{MONTH_NAMES.map((m,i)=>(<option key={i} value={i}>{m}</option>))}</select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700"><i className="fas fa-chevron-down text-xs"></i></div>
+                            </div>
                         </div>
-                        <div className="flex items-end">
-                             <button onClick={() => setActiveTab('constraints')} className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition shadow flex items-center justify-center"><i className="fas fa-magic mr-2"></i> Yeni Liste Oluştur</button>
-                        </div>
+                        <div className="flex items-end"><button onClick={() => setActiveTab('constraints')} className="w-full bg-teal-600 text-white py-2 px-4 rounded-lg font-bold hover:bg-teal-700 transition shadow-lg transform hover:translate-y-[-1px] flex items-center justify-center"><i className="fas fa-magic mr-2"></i> Yeni Liste Oluştur</button></div>
                     </div>
-
-                    <div className="border-t pt-4">
-                        <h3 className="font-semibold mb-3 text-gray-600 flex items-center justify-between">
-                            <span>Personel Listesi ({staff.length} Kişi)</span>
-                            <span className="text-xs text-gray-400 font-normal">Düzenlemek için isme tıklayın</span>
-                        </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 pr-1 custom-scroll">
+                    <div className="border-t border-gray-100 pt-4">
+                        <h3 className="font-bold mb-3 text-gray-700 flex items-center justify-between"><span>Personel Listesi ({staff.length} Kişi)</span><span className="text-xs text-gray-400 font-normal bg-gray-100 px-2 py-1 rounded">İsim üzerine tıklayarak düzenleyin</span></h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 pr-1 custom-scroll">
                             {staff.map((p, i) => (
-                                <StaffItem key={i} name={p} onSave={(newName) => handleStaffUpdate(i, newName)} onDelete={() => removeStaff(i)} />
+                                <StaffItem key={i} name={p} onSave={handleStaffUpdate} onDelete={removeStaff} />
                             ))}
                         </div>
-                        <button onClick={addStaff} className="mt-3 w-full md:w-auto bg-green-50 text-green-700 py-2 px-4 rounded border border-green-200 hover:bg-green-100 hover:border-green-300 transition font-semibold flex items-center justify-center"><i className="fas fa-user-plus mr-2"></i> Personel Ekle</button>
+                        <button onClick={addStaff} className="mt-4 w-full md:w-auto bg-green-50 text-green-700 py-2 px-4 rounded-lg border border-green-200 hover:bg-green-100 hover:border-green-300 transition font-bold flex items-center justify-center shadow-sm"><i className="fas fa-user-plus mr-2"></i> Personel Ekle</button>
                     </div>
                 </div>
             );
 
             const ConstraintGrid = () => (
-                <div className="bg-white p-4 rounded-lg shadow-md mb-6 overflow-hidden animate-fade-in">
+                <div className="bg-white p-4 rounded-xl shadow-lg mb-6 overflow-hidden animate-fade-in border border-gray-100">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-3">
-                         <button onClick={() => setActiveTab('settings')} className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 shadow flex items-center transition"><i className="fas fa-arrow-left mr-2"></i> Ana Menü</button>
+                         <button onClick={() => setActiveTab('settings')} className="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 shadow flex items-center transition"><i className="fas fa-arrow-left mr-2"></i> Ana Menü</button>
                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex space-x-2 text-xs md:text-sm bg-gray-50 p-2 rounded">
-                                <span className="flex items-center"><span className="w-3 h-3 bg-red-100 border border-red-200 mr-1"></span> X: İstemiyor</span>
-                                <span className="flex items-center"><span className="w-3 h-3 bg-gray-100 border border-gray-300 mr-1"></span> İ: İzinli</span>
-                                <span className="flex items-center"><span className="w-3 h-3 bg-blue-200 border border-blue-300 mr-1"></span> N: Kesin Nöbet</span>
-                            </div>
+                            <div className="flex space-x-2 text-xs md:text-sm bg-gray-50 p-2 rounded-lg border border-gray-200"><span className="flex items-center"><span className="w-4 h-4 bg-red-100 border border-red-200 mr-1 rounded-sm"></span> X: İstemiyor</span><span className="flex items-center"><span className="w-4 h-4 bg-gray-100 border border-gray-300 mr-1 rounded-sm"></span> İ: İzinli</span><span className="flex items-center"><span className="w-4 h-4 bg-teal-50 border border-teal-300 mr-1 rounded-sm"></span> N: Kesin</span></div>
                             <div className="relative">
-                                <button onClick={() => setShowClearConfirm(true)} className="bg-red-100 text-red-600 py-2 px-3 rounded hover:bg-red-200 text-sm border border-red-200 flex items-center transition"><i className="fas fa-trash-alt mr-1"></i> Temizle</button>
+                                <button onClick={() => setShowClearConfirm(true)} className="bg-red-50 text-red-600 py-2 px-4 rounded-lg hover:bg-red-100 text-sm border border-red-200 flex items-center transition font-semibold"><i className="fas fa-trash-alt mr-1"></i> Temizle</button>
                                 {showClearConfirm && (
-                                    <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 p-3 shadow-xl rounded-lg z-50 w-48 animate-fade-in">
-                                        <p className="text-xs text-gray-700 mb-3 font-semibold text-center">Tüm işaretler silinsin mi?</p>
+                                    <div className="absolute top-full right-0 mt-2 bg-white border border-gray-200 p-4 shadow-2xl rounded-xl z-50 w-56 animate-fade-in">
+                                        <p className="text-sm text-gray-800 mb-3 font-bold text-center">Tüm işaretler silinsin mi?</p>
                                         <div className="flex justify-center gap-2">
-                                            <button onClick={() => setShowClearConfirm(false)} className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded transition">İptal</button>
-                                            <button onClick={clearConstraints} className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded transition">Evet, Sil</button>
+                                            <button onClick={() => setShowClearConfirm(false)} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition font-medium">Vazgeç</button>
+                                            <button onClick={clearConstraints} className="text-xs bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg transition font-bold shadow-red-200 shadow-md">Evet, Sil</button>
                                         </div>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
-
-                    <div className="mb-4">
-                         <h2 className="text-xl font-bold text-gray-700 text-center">Kısıtlamalar: {MONTH_NAMES[inputMonth]} {inputYear}</h2>
-                         <p className="text-center text-sm text-gray-500">Personelin nöbet tutamayacağı veya kesin tutacağı günleri seçin.</p>
-                    </div>
-                    
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full text-xs border-collapse border border-gray-300">
+                    <div className="mb-4 text-center"><h2 className="text-2xl font-bold text-gray-800">Kısıtlamalar</h2><p className="text-gray-500 text-sm font-medium">{MONTH_NAMES[inputMonth]} {inputYear}</p></div>
+                    <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                        <table className="min-w-full text-xs border-collapse">
                             <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="th-cell sticky left-0 bg-gray-100 z-10 w-48 text-left pl-2">Personel</th>
+                                <tr className="header-bg">
+                                    <th className="th-cell sticky left-0 z-20 w-48 text-left pl-3 border border-teal-800 bg-teal-700 text-white">Personel</th>
                                     {getDaysArray().map(d => {
                                         const isWe = isWeekend(inputYear, inputMonth, d);
                                         return (
-                                            <th key={d} className={`th-cell w-8 ${isWe ? 'bg-gray-200' : ''}`}>
-                                                <div className="flex flex-col">
-                                                    <span>{d}</span>
-                                                    <span className="text-[9px] text-gray-500">{getDayNameInitial(inputYear, inputMonth, d)}</span>
-                                                </div>
+                                            <th key={d} className={`th-cell w-8 border border-teal-800 ${isWe ? 'weekend-bg text-orange-900' : 'bg-teal-700 text-white'}`}>
+                                                <div className="flex flex-col"><span>{d}</span><span className="text-[9px] opacity-80">{getDayNameInitial(inputYear, inputMonth, d)}</span></div>
                                             </th>
                                         )
                                     })}
                                 </tr>
                             </thead>
                             <tbody>
-                                {staff.map(person => (
-                                    <tr key={person}>
-                                        <td className="td-cell p-1 font-medium sticky left-0 bg-white z-10 whitespace-nowrap">{person}</td>
+                                {staff.map((person, idx) => (
+                                    <tr key={person} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                                        <td className="td-cell p-1 font-semibold sticky left-0 bg-inherit z-10 whitespace-nowrap pl-3 border-gray-300 text-gray-700">{person}</td>
                                         {getDaysArray().map(d => {
                                             const val = constraints[`${person}_${d}`];
                                             const isWe = isWeekend(inputYear, inputMonth, d);
                                             return (
-                                                <td key={d} className={`td-cell cursor-pointer select-none transition-colors ${getCellColor(val, isWe)}`} onClick={() => toggleConstraint(person, d)}>
-                                                    <div className="w-full h-8 flex items-center justify-center">{val || ''}</div>
-                                                </td>
+                                                <td key={d} className={`td-cell cursor-pointer select-none transition-colors border-gray-300 ${getCellColor(val, isWe)}`} onClick={() => toggleConstraint(person, d)}><div className="w-full h-full flex items-center justify-center text-[10px]">{val || ''}</div></td>
                                             );
                                         })}
                                     </tr>
@@ -692,67 +669,55 @@
                             </tbody>
                         </table>
                     </div>
-                    
-                    <div className="mt-6 flex justify-end">
-                         <button onClick={generateSchedule} className="bg-teal-600 text-white py-2 px-6 rounded font-bold hover:bg-teal-700 shadow-lg transform transition hover:scale-105 flex items-center"><i className="fas fa-magic mr-2"></i> LİSTEYİ OLUŞTUR</button>
-                    </div>
+                    <div className="mt-6 flex justify-end"><button onClick={generateSchedule} className="bg-teal-600 text-white py-3 px-8 rounded-lg font-bold hover:bg-teal-700 shadow-lg transform transition hover:scale-105 flex items-center text-lg"><i className="fas fa-magic mr-2"></i> LİSTEYİ OLUŞTUR</button></div>
                 </div>
             );
 
             const ResultView = () => (
                 <div className="animate-fade-in">
-                    <style>{`
-                        .cell-input { width: 100%; height: 100%; text-align: center; background: transparent; outline: none; }
-                        .print-container { width: 100%; font-family: 'Arial', sans-serif; background-color: white; }
-                    `}</style>
-
-                    <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+                    <style>{`.cell-input { width: 100%; height: 100%; text-align: center; background: transparent; outline: none; font-weight: inherit; } .print-container { width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: white; }`}</style>
+                    <div className="bg-white p-4 rounded-xl shadow-lg mb-6 border border-gray-100">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
                             <div className="flex items-center gap-4">
-                                <button onClick={() => setActiveTab('settings')} className="bg-gray-600 text-white py-2 px-3 rounded hover:bg-gray-700 text-sm shadow flex items-center transition"><i className="fas fa-home mr-2"></i> Ana Menü</button>
+                                <button onClick={() => setActiveTab('settings')} className="bg-gray-600 text-white py-2 px-3 rounded-lg hover:bg-gray-700 text-sm shadow flex items-center transition"><i className="fas fa-home mr-2"></i> Ana Menü</button>
                                 <h2 className="text-2xl font-bold text-teal-800">Nöbet Listesi</h2>
                             </div>
                             <div className="flex space-x-2">
-                                <button onClick={() => setActiveTab('constraints')} className="bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 text-sm shadow transition"><i className="fas fa-edit"></i> Düzenle</button>
-                                <button onClick={generateSchedule} className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm shadow transition flex items-center"><i className="fas fa-sync-alt mr-2"></i> Tekrar Dağıt</button>
-                                <button onClick={downloadImage} className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 font-bold text-sm shadow transform active:scale-95 transition"><i className="fas fa-download"></i> JPG İNDİR</button>
+                                <button onClick={() => setActiveTab('constraints')} className="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 text-sm shadow transition"><i className="fas fa-edit"></i> Düzenle</button>
+                                <button onClick={generateSchedule} className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 text-sm shadow transition flex items-center"><i className="fas fa-sync-alt mr-2"></i> Tekrar Dağıt</button>
+                                <button onClick={downloadImage} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 font-bold text-sm shadow transform active:scale-95 transition"><i className="fas fa-download"></i> JPG İNDİR</button>
                             </div>
                         </div>
-
-                        <div className="overflow-x-auto border rounded-lg bg-white" ref={tableRef}>
-                            <div className="print-container p-8 min-w-[1000px]">
-                                <div className="text-center mb-8">
-                                    <h1 className="text-2xl font-bold uppercase tracking-wide text-black">ÇOCUK ACİL SERVİS NÖBET ÇİZELGESİ</h1>
-                                    <h3 className="text-lg text-gray-600 uppercase mt-2">{loadedDate ? MONTH_NAMES[loadedDate.month] : MONTH_NAMES[inputMonth]} {loadedDate ? loadedDate.year : inputYear}</h3>
+                        <div className="overflow-x-auto border rounded-lg bg-white shadow-inner" ref={tableRef}>
+                            <div className="print-container p-8 min-w-[1200px]">
+                                <div className="text-center mb-6 pb-2 border-b-2 border-teal-900">
+                                    <h1 className="text-2xl font-black uppercase tracking-widest text-teal-900">ÇOCUK ACİL SERVİS NÖBET ÇİZELGESİ</h1>
+                                    <h3 className="text-lg text-teal-800 uppercase mt-1 font-bold tracking-wide">{loadedDate ? MONTH_NAMES[loadedDate.month] : MONTH_NAMES[inputMonth]} {loadedDate ? loadedDate.year : inputYear}</h3>
                                 </div>
-
-                                <table className="w-full text-xs border-collapse border border-gray-400 text-black table-fixed">
+                                <table className="w-full text-xs border-collapse border border-gray-800 text-black table-fixed">
                                     <thead>
-                                        <tr className="bg-gray-100">
-                                            <th className="th-cell w-48 text-left pl-2 bg-gray-100 font-bold text-black">PERSONEL ADI SOYADI</th>
+                                        <tr className="header-bg">
+                                            <th className="th-cell w-48 text-left pl-3 bg-teal-700 text-white uppercase border border-gray-600">PERSONEL ADI SOYADI</th>
                                             {getResultDaysArray().map(d => {
                                                 const displayYear = loadedDate ? loadedDate.year : inputYear;
                                                 const displayMonth = loadedDate ? loadedDate.month : inputMonth;
                                                 const isWe = isWeekend(displayYear, displayMonth, d);
                                                 return (
-                                                    <th key={d} className={`th-cell w-8 font-bold text-black ${isWe ? 'bg-gray-200' : ''}`}>
-                                                        <div className="flex flex-col">
-                                                            <span>{d}</span>
-                                                            <span className="text-[8px] font-normal text-gray-600">{getDayNameInitial(displayYear, displayMonth, d)}</span>
-                                                        </div>
+                                                    <th key={d} className={`th-cell w-8 border border-gray-600 ${isWe ? 'weekend-bg text-orange-900' : 'bg-teal-50 text-teal-900'}`}>
+                                                        <div className="flex flex-col"><span>{d}</span><span className="text-[9px] font-normal opacity-80">{getDayNameInitial(displayYear, displayMonth, d)}</span></div>
                                                     </th>
                                                 )
                                             })}
-                                            <th className="th-cell w-12 bg-gray-200 text-black">Nöbet</th>
-                                            <th className="th-cell w-12 bg-gray-200 text-black">Saat</th>
+                                            <th className="th-cell w-10 bg-teal-100 text-teal-900 border border-gray-600">Nöbet</th>
+                                            <th className="th-cell w-10 bg-teal-100 text-teal-900 border border-gray-600">Saat</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {staff.map((person, idx) => {
                                             const personStats = stats[person] || {shifts:0, totalHours:0};
                                             return (
-                                                <tr key={person} className="bg-white">
-                                                    <td className="td-cell p-1 font-semibold border border-gray-400 whitespace-nowrap text-black">{person}</td>
+                                                <tr key={person} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                                                    <td className="td-cell p-1 pl-3 font-bold border border-gray-400 whitespace-nowrap text-black">{person}</td>
                                                     {getResultDaysArray().map(d => {
                                                         const displayYear = loadedDate ? loadedDate.year : inputYear;
                                                         const displayMonth = loadedDate ? loadedDate.month : inputMonth;
@@ -761,54 +726,38 @@
                                                         const val = schedule[key];
                                                         let displayVal = "";
                                                         let textColor = "text-gray-300";
-                                                        if (val === '24') { displayVal = "24"; textColor = "text-black font-bold"; }
+                                                        if (val === '24') { displayVal = "24"; textColor = "text-black font-black text-sm"; }
                                                         else if (val === 'İ') { displayVal = "İ"; textColor = "text-red-600 font-bold"; }
                                                         else if (val === 'X') { displayVal = "X"; textColor = "text-gray-400"; }
-
                                                         return (
-                                                            <td key={d} className={`td-cell p-0 text-center relative h-8 ${isWe ? 'bg-gray-100' : ''}`}>
-                                                                <input 
-                                                                    className={`cell-input ${textColor}`}
-                                                                    value={displayVal}
-                                                                    onChange={(e) => {
-                                                                        const newVal = e.target.value.toUpperCase();
-                                                                        let safeVal = newVal;
-                                                                        if(newVal === 'I' || newVal === 'İ') safeVal = 'İ';
-                                                                        const newSched = {...schedule, [key]: safeVal};
-                                                                        setSchedule(newSched);
-                                                                        calculateStats(newSched);
-                                                                        if(loadedDate) {
-                                                                            saveToLocal({ staff, year: loadedDate.year, month: loadedDate.month, daysInMonth: daysInMonth, constraints, schedule: newSched });
-                                                                        }
-                                                                    }}
-                                                                />
+                                                            <td key={d} className={`td-cell p-0 text-center relative h-8 border border-gray-400 ${isWe ? 'weekend-bg' : ''}`}>
+                                                                <input className={`cell-input ${textColor}`} value={displayVal} onChange={(e) => { const newVal = e.target.value.toUpperCase(); let safeVal = newVal; if(newVal === 'I' || newVal === 'İ') safeVal = 'İ'; const newSched = {...schedule, [key]: safeVal}; setSchedule(newSched); calculateStats(newSched); if(loadedDate) { saveToLocal({ staff, year: loadedDate.year, month: loadedDate.month, daysInMonth: daysInMonth, constraints, schedule: newSched }); } }} />
                                                             </td>
                                                         );
                                                     })}
-                                                    <td className="td-cell text-center font-bold bg-gray-100 text-black">{personStats.shifts}</td>
-                                                    <td className="td-cell text-center font-bold bg-gray-100 text-black">{personStats.totalHours}</td>
+                                                    <td className="td-cell text-center font-bold bg-teal-50 text-black border border-gray-400">{personStats.shifts}</td>
+                                                    <td className="td-cell text-center font-bold bg-teal-50 text-black border border-gray-400">{personStats.totalHours}</td>
                                                 </tr>
                                             );
                                         })}
-                                        <tr className="bg-gray-200 font-bold text-black">
-                                            <td className="td-cell p-1 text-right">GÜNLÜK TOPLAM:</td>
+                                        <tr className="bg-gray-800 text-white font-bold">
+                                            <td className="td-cell p-1 text-right border border-gray-600 pr-3">GÜNLÜK TOPLAM:</td>
                                             {getResultDaysArray().map(d => {
                                                 let count = 0;
                                                 staff.forEach(p => { if(schedule[`${p}_${d}`] === '24') count++; });
-                                                return (<td key={d} className={`td-cell text-center ${count !== 6 ? 'text-red-600' : 'text-green-900'}`}>{count}</td>)
+                                                return (<td key={d} className={`td-cell text-center border border-gray-600 ${count !== 6 ? 'bg-red-500 text-white' : 'bg-teal-700 text-white'}`}>{count}</td>)
                                             })}
-                                            <td colSpan="2" className="td-cell"></td>
+                                            <td colSpan="2" className="td-cell border border-gray-600 bg-gray-800"></td>
                                         </tr>
                                     </tbody>
                                 </table>
-
-                                <div className="flex justify-end mt-4">
-                                    <div className="border border-gray-400 p-2 text-xs text-black bg-white inline-block">
-                                        <div className="font-bold border-b border-gray-300 mb-1 pb-1">AÇIKLAMALAR</div>
-                                        <div className="flex items-center mb-1"><span className="w-4 font-bold text-center mr-1">24</span> : 24 Saat Nöbet</div>
-                                        <div className="flex items-center mb-1"><span className="w-4 font-bold text-center mr-1 text-red-600">İ</span> : İzinli / Yıllık İzin</div>
-                                        <div className="flex items-center mb-1"><span className="w-4 font-bold text-center mr-1 text-blue-800">N</span> : Kesin Nöbet (İstek)</div>
-                                        <div className="flex items-center"><span className="w-4 font-bold text-center mr-1 text-gray-400">X</span> : Nöbet İstemiyor</div>
+                                <div className="flex justify-end mt-6">
+                                    <div className="border-2 border-gray-800 p-3 text-xs text-black bg-white inline-block shadow-sm">
+                                        <div className="font-bold border-b border-gray-800 mb-2 pb-1 text-sm text-center bg-gray-100">AÇIKLAMALAR</div>
+                                        <div className="flex items-center mb-1"><span className="w-6 font-black text-center mr-2 text-black text-sm">24</span> : 24 Saat Nöbet</div>
+                                        <div className="flex items-center mb-1"><span className="w-6 font-bold text-center mr-2 text-red-600">İ</span> : İzinli / Yıllık İzin</div>
+                                        <div className="flex items-center mb-1"><span className="w-6 font-bold text-center mr-2 text-teal-700">N</span> : Kesin Nöbet (İstek)</div>
+                                        <div className="flex items-center"><span className="w-6 font-bold text-center mr-2 text-gray-400">X</span> : Nöbet İstemiyor</div>
                                     </div>
                                 </div>
                             </div>
@@ -818,10 +767,10 @@
             );
 
             return (
-                <div className="max-w-7xl mx-auto p-4 md:p-8 font-sans bg-gray-50 min-h-screen">
-                    <header className="flex items-center justify-center mb-8">
-                        <div className="bg-teal-600 text-white p-4 rounded-full shadow-lg mr-4"><i className="fas fa-user-nurse fa-2x"></i></div>
-                        <div><h1 className="text-3xl font-bold text-gray-800">Nöbetmatik v1.1</h1><p className="text-gray-500">Çocuk Acil Servis Otomasyonu</p></div>
+                <div className="max-w-full mx-auto p-2 md:p-6 font-sans bg-gray-50 min-h-screen">
+                    <header className="flex items-center justify-center mb-6">
+                        <div className="bg-teal-600 text-white p-3 rounded-full shadow-lg mr-3 transform hover:scale-110 transition"><i className="fas fa-user-nurse fa-2x"></i></div>
+                        <div><h1 className="text-2xl md:text-3xl font-bold text-gray-800 tracking-tight">Nöbetmatik v1.4</h1><p className="text-gray-500 text-sm font-medium">Çocuk Acil Servis Otomasyonu</p></div>
                     </header>
                     {activeTab === 'settings' && <SettingsPanel />}
                     {activeTab === 'constraints' && <ConstraintGrid />}
