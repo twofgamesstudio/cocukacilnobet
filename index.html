@@ -81,7 +81,8 @@
             "NURCAN YILMAZ", "ÖZNUR TANGUR"
         ].sort((a, b) => a.localeCompare(b, 'tr'));
 
-        const SHIFTS_PER_DAY = 6;
+        // GÜNLÜK NÖBET SAYISI 7
+        const SHIFTS_PER_DAY = 7;
         const MAX_CONSECUTIVE_GAP_SHIFTS = 5; 
         const MONTH_NAMES = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
         const DAY_INITIALS = ["P", "P", "S", "Ç", "P", "C", "C"]; 
@@ -174,7 +175,7 @@
             );
         };
 
-        // --- Alt Bileşenler (Dışarı Taşındı - Performans İçin) ---
+        // --- Alt Bileşenler ---
 
         const SettingsPanel = ({ 
             staff, inputYear, setInputYear, inputMonth, setInputMonth, 
@@ -322,12 +323,83 @@
 
         const ResultView = ({
             staff, loadedDate, inputMonth, inputYear, schedule, setSchedule, stats, calculateStats,
-            saveToLocal, setActiveTab, generateSchedule, downloadImage, daysInMonth, constraints
+            saveToLocal, setActiveTab, generateSchedule, daysInMonth, constraints
         }) => {
             const tableRef = useRef(null);
+            const [isDownloading, setIsDownloading] = useState(false);
+            
             const resultDays = getResultDaysArray(loadedDate, daysInMonth);
             const displayYear = loadedDate ? loadedDate.year : inputYear;
             const displayMonth = loadedDate ? loadedDate.month : inputMonth;
+
+            // İndirme fonksiyonu ResultView içine taşındı ki tableRef doğru DOM elementini bulabilsin.
+            const downloadImage = () => {
+                if (tableRef.current && window.html2canvas) {
+                    setIsDownloading(true);
+                    
+                    const originalTable = tableRef.current.querySelector('.print-container');
+                    if (!originalTable) {
+                        setIsDownloading(false);
+                        return;
+                    }
+                    
+                    const clone = originalTable.cloneNode(true);
+                    const targetWidth = 1600; 
+                    
+                    // Klonun stilleri
+                    clone.style.position = 'fixed'; 
+                    clone.style.top = '-10000px'; 
+                    clone.style.left = '0'; 
+                    clone.style.width = `${targetWidth}px`; 
+                    clone.style.zIndex = '-1000'; 
+                    clone.style.backgroundColor = '#ffffff'; 
+                    clone.style.padding = '40px'; 
+                    
+                    // Inputları div ile değiştir, böylece canvas input içini okuyabilir
+                    const originalInputs = originalTable.querySelectorAll('input');
+                    const clonedInputs = clone.querySelectorAll('input');
+                    originalInputs.forEach((origInput, index) => {
+                        const clonedInput = clonedInputs[index];
+                        if (clonedInput) {
+                            const div = document.createElement('div');
+                            div.innerText = origInput.value;
+                            div.className = origInput.className;
+                            div.style.display = 'flex'; 
+                            div.style.alignItems = 'center'; 
+                            div.style.justifyContent = 'center'; 
+                            div.style.width = '100%'; 
+                            div.style.height = '100%'; 
+                            div.style.backgroundColor = 'transparent';
+                            if (clonedInput.parentNode) clonedInput.parentNode.replaceChild(div, clonedInput);
+                        }
+                    });
+                    
+                    // Sticky elementleri sıfırla
+                    clone.querySelectorAll('.sticky').forEach(el => { el.style.position = 'static'; });
+                    document.body.appendChild(clone);
+                    
+                    window.html2canvas(clone, { 
+                        scale: 2, 
+                        backgroundColor: "#ffffff", 
+                        useCORS: true, 
+                        width: targetWidth, 
+                        height: clone.scrollHeight + 50 
+                    }).then(canvas => {
+                        const link = document.createElement('a');
+                        link.download = `Cocuk_Acil_Nobet_Listesi_${displayMonth+1}_${displayYear}.jpg`;
+                        link.href = canvas.toDataURL('image/jpeg', 0.95);
+                        link.click();
+                        document.body.removeChild(clone);
+                    }).catch(err => {
+                        console.error("Resim oluşturma hatası: ", err);
+                        document.body.removeChild(clone);
+                    }).finally(() => {
+                        setIsDownloading(false);
+                    });
+                } else {
+                    alert("Yazdırma aracı yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin.");
+                }
+            };
 
             return (
                 <div className="animate-fade-in">
@@ -341,7 +413,9 @@
                             <div className="flex space-x-2">
                                 <button onClick={() => setActiveTab('constraints')} className="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 text-sm shadow transition"><i className="fas fa-edit"></i> Düzenle</button>
                                 <button onClick={generateSchedule} className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 text-sm shadow transition flex items-center"><i className="fas fa-sync-alt mr-2"></i> Tekrar Dağıt</button>
-                                <button onClick={downloadImage} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 font-bold text-sm shadow transform active:scale-95 transition"><i className="fas fa-download"></i> JPG İNDİR</button>
+                                <button onClick={downloadImage} disabled={isDownloading} className={`bg-green-600 text-white py-2 px-4 rounded-lg font-bold text-sm shadow transition flex items-center ${isDownloading ? 'opacity-70 cursor-wait' : 'hover:bg-green-700 transform active:scale-95'}`}>
+                                    {isDownloading ? <><i className="fas fa-spinner fa-spin mr-2"></i> İNDİRİLİYOR...</> : <><i className="fas fa-download mr-2"></i> JPG İNDİR</>}
+                                </button>
                             </div>
                         </div>
                         <div className="overflow-x-auto border rounded-lg bg-white shadow-inner" ref={tableRef}>
@@ -407,7 +481,8 @@
                                             {resultDays.map(d => {
                                                 let count = 0;
                                                 staff.forEach(p => { if(schedule[`${p}_${d}`] === '24') count++; });
-                                                return (<td key={d} className={`td-cell text-center border border-gray-600 ${count !== 6 ? 'bg-red-500 text-white' : 'bg-teal-700 text-white'}`}>{count}</td>)
+                                                // KONTROL 7'YE GÖRE ÇALIŞIR
+                                                return (<td key={d} className={`td-cell text-center border border-gray-600 ${count !== SHIFTS_PER_DAY ? 'bg-red-500 text-white' : 'bg-teal-700 text-white'}`}>{count}</td>)
                                             })}
                                             <td colSpan="2" className="td-cell border border-gray-600 bg-gray-800"></td>
                                         </tr>
@@ -442,7 +517,6 @@
             const [stats, setStats] = useState({});
             const [activeTab, setActiveTab] = useState('settings'); 
             const [showClearConfirm, setShowClearConfirm] = useState(false); 
-            const tableRef = useRef(null);
             const fileInputRef = useRef(null);
 
             useEffect(() => {
@@ -745,37 +819,6 @@
                 event.target.value = '';
             };
 
-            const downloadImage = () => {
-                if (tableRef.current && window.html2canvas) {
-                    const originalTable = tableRef.current.querySelector('.print-container');
-                    if (!originalTable) return;
-                    const clone = originalTable.cloneNode(true);
-                    const targetWidth = 1600; 
-                    clone.style.position = 'fixed'; clone.style.top = '-10000px'; clone.style.left = '0'; clone.style.width = `${targetWidth}px`; clone.style.zIndex = '-1000'; clone.style.backgroundColor = '#ffffff'; clone.style.padding = '40px'; 
-                    const originalInputs = originalTable.querySelectorAll('input');
-                    const clonedInputs = clone.querySelectorAll('input');
-                    originalInputs.forEach((origInput, index) => {
-                        const clonedInput = clonedInputs[index];
-                        if (clonedInput) {
-                            const div = document.createElement('div');
-                            div.innerText = origInput.value;
-                            div.className = origInput.className;
-                            div.style.display = 'flex'; div.style.alignItems = 'center'; div.style.justifyContent = 'center'; div.style.width = '100%'; div.style.height = '100%'; div.style.backgroundColor = 'transparent';
-                            if (clonedInput.parentNode) clonedInput.parentNode.replaceChild(div, clonedInput);
-                        }
-                    });
-                    clone.querySelectorAll('.sticky').forEach(el => { el.style.position = 'static'; });
-                    document.body.appendChild(clone);
-                    window.html2canvas(clone, { scale: 2, backgroundColor: "#ffffff", useCORS: true, width: targetWidth, height: clone.scrollHeight + 50 }).then(canvas => {
-                        const link = document.createElement('a');
-                        link.download = `Cocuk_Acil_Nobet_Listesi_${loadedDate ? loadedDate.month+1 : inputMonth+1}_${loadedDate ? loadedDate.year : inputYear}.jpg`;
-                        link.href = canvas.toDataURL('image/jpeg', 0.95);
-                        link.click();
-                        document.body.removeChild(clone);
-                    });
-                }
-            };
-
             const handleStaffUpdate = (oldName, newName) => {
                 let newStaff = staff.map(s => s === oldName ? newName : s);
                 newStaff.sort((a, b) => a.localeCompare(b, 'tr'));
@@ -799,7 +842,7 @@
                     </header>
                     {activeTab === 'settings' && <SettingsPanel {...{ staff, inputYear, setInputYear, inputMonth, setInputMonth, loadedDate, savedProjects, loadProject, saveProject, fileInputRef, schedule, handleDeleteClick, confirmDeleteProject, cancelDeleteProject, projectToDelete, loadFromSaved, handleStaffUpdate, removeStaff, addStaff, setActiveTab }} />}
                     {activeTab === 'constraints' && <ConstraintGrid {...{ staff, inputYear, inputMonth, daysInMonth, constraints, toggleConstraint, clearConstraints, showClearConfirm, setShowClearConfirm, setActiveTab, generateSchedule }} />}
-                    {activeTab === 'result' && <ResultView {...{ staff, loadedDate, inputMonth, inputYear, schedule, setSchedule, stats, calculateStats, saveToLocal, setActiveTab, generateSchedule, downloadImage, daysInMonth, constraints }} />}
+                    {activeTab === 'result' && <ResultView {...{ staff, loadedDate, inputMonth, inputYear, schedule, setSchedule, stats, calculateStats, saveToLocal, setActiveTab, generateSchedule, daysInMonth, constraints }} />}
                 </div>
             );
         }
@@ -809,3 +852,5 @@
     </script>
 </body>
 </html>
+
+
