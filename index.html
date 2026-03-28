@@ -25,6 +25,10 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f0f4f8; }
         .cell-input { width: 100%; height: 100%; text-align: center; background: transparent; outline: none; }
+        /* Hedef input için gizli oklar */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
         
         /* Yazıcı Dostu Konteyner */
         .print-container { 
@@ -81,7 +85,6 @@
             "NURCAN YILMAZ", "ÖZNUR TANGUR"
         ].sort((a, b) => a.localeCompare(b, 'tr'));
 
-        // GÜNLÜK NÖBET SAYISI 7
         const SHIFTS_PER_DAY = 7;
         const MAX_CONSECUTIVE_GAP_SHIFTS = 5; 
         const MONTH_NAMES = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
@@ -261,12 +264,19 @@
 
         const ConstraintGrid = ({ 
             staff, inputYear, inputMonth, daysInMonth, constraints, toggleConstraint, 
-            clearConstraints, showClearConfirm, setShowClearConfirm, setActiveTab, generateSchedule 
+            clearConstraints, showClearConfirm, setShowClearConfirm, setActiveTab, generateSchedule,
+            shiftTargets, setShiftTargets
         }) => {
             const daysArray = getDaysArray(daysInMonth);
+            
+            // Hedef hesaplamaları
+            const totalNeeded = daysInMonth * SHIFTS_PER_DAY;
+            const currentAssigned = staff.reduce((acc, p) => acc + (shiftTargets[p] !== undefined && shiftTargets[p] !== '' ? parseInt(shiftTargets[p]) : 0), 0);
+            const remaining = totalNeeded - currentAssigned;
+
             return (
                 <div className="bg-white p-4 rounded-xl shadow-lg mb-6 overflow-hidden animate-fade-in border border-gray-100">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-3">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-3">
                          <button onClick={() => setActiveTab('settings')} className="bg-gray-500 text-white py-2 px-4 rounded-lg hover:bg-gray-600 shadow flex items-center transition"><i className="fas fa-arrow-left mr-2"></i> Ana Menü</button>
                          <div className="flex flex-wrap items-center gap-3">
                             <div className="flex space-x-2 text-xs md:text-sm bg-gray-50 p-2 rounded-lg border border-gray-200"><span className="flex items-center"><span className="w-4 h-4 bg-red-100 border border-red-200 mr-1 rounded-sm"></span> X: İstemiyor</span><span className="flex items-center"><span className="w-4 h-4 bg-gray-100 border border-gray-300 mr-1 rounded-sm"></span> İ: İzinli</span><span className="flex items-center"><span className="w-4 h-4 bg-teal-50 border border-teal-300 mr-1 rounded-sm"></span> N: Kesin</span></div>
@@ -284,16 +294,29 @@
                             </div>
                         </div>
                     </div>
-                    <div className="mb-4 text-center"><h2 className="text-2xl font-bold text-gray-800">Kısıtlamalar</h2><p className="text-gray-500 text-sm font-medium">{MONTH_NAMES[inputMonth]} {inputYear}</p></div>
-                    <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+
+                    <div className="mb-4 text-center">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-2">Kısıtlamalar ve Hedef Nöbetler</h2>
+                        <div className="bg-teal-50 border border-teal-200 p-3 rounded-lg flex flex-wrap gap-4 text-sm font-semibold text-teal-800 items-center justify-center max-w-3xl mx-auto shadow-sm">
+                            <div>Aylık Nöbet İhtiyacı: <span className="text-black font-black bg-white px-2 py-1 rounded shadow-sm">{totalNeeded}</span></div>
+                            <div>Manuel Atanan: <span className="text-black font-black bg-white px-2 py-1 rounded shadow-sm">{currentAssigned}</span></div>
+                            <div>Oto. Dağıtılacak Kalan: <span className={`font-black px-2 py-1 rounded shadow-sm ${remaining < 0 ? 'text-red-600 bg-red-100' : 'text-black bg-white'}`}>{remaining}</span></div>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm relative">
                         <table className="min-w-full text-xs border-collapse">
                             <thead>
                                 <tr className="header-bg">
-                                    <th className="th-cell sticky left-0 z-20 w-48 text-left pl-3 border border-teal-800 bg-teal-700 text-white">Personel</th>
+                                    {/* Personel Genişliği 180px Sabitlendi */}
+                                    <th className="th-cell sticky left-0 z-20 min-w-[180px] w-[180px] max-w-[180px] text-left pl-3 border border-teal-800 bg-teal-700 text-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">Personel</th>
+                                    {/* Hedef Sütunu Sol Boşluğu (180px) ve Genişliği Sabitlendi */}
+                                    <th className="th-cell sticky left-[180px] z-20 min-w-[64px] w-[64px] max-w-[64px] border border-teal-800 bg-teal-800 text-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">Hedef</th>
+                                    
                                     {daysArray.map(d => {
                                         const isWe = isWeekend(inputYear, inputMonth, d);
                                         return (
-                                            <th key={d} className={`th-cell w-8 border border-teal-800 ${isWe ? 'weekend-bg text-orange-900' : 'bg-teal-700 text-white'}`}>
+                                            <th key={d} className={`th-cell min-w-[32px] w-[32px] border border-teal-800 ${isWe ? 'weekend-bg text-orange-900' : 'bg-teal-700 text-white'}`}>
                                                 <div className="flex flex-col"><span>{d}</span><span className="text-[9px] opacity-80">{getDayNameInitial(inputYear, inputMonth, d)}</span></div>
                                             </th>
                                         )
@@ -303,7 +326,18 @@
                             <tbody>
                                 {staff.map((person, idx) => (
                                     <tr key={person} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                                        <td className="td-cell p-1 font-semibold sticky left-0 bg-inherit z-10 whitespace-nowrap pl-3 border-gray-300 text-gray-700">{person}</td>
+                                        <td className="td-cell p-1 font-semibold sticky left-0 z-10 min-w-[180px] w-[180px] max-w-[180px] whitespace-nowrap pl-3 border-gray-300 text-gray-700 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{person}</td>
+                                        <td className="td-cell p-0 sticky left-[180px] z-10 min-w-[64px] w-[64px] max-w-[64px] border-gray-300 bg-teal-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] transition hover:bg-teal-100">
+                                            <input 
+                                                type="number" 
+                                                min="0" 
+                                                max={daysInMonth}
+                                                value={shiftTargets[person] !== undefined ? shiftTargets[person] : ''}
+                                                onChange={(e) => setShiftTargets({...shiftTargets, [person]: e.target.value})}
+                                                className="w-full h-full text-center bg-transparent outline-none font-bold text-teal-900 text-sm"
+                                                placeholder="Oto"
+                                            />
+                                        </td>
                                         {daysArray.map(d => {
                                             const val = constraints[`${person}_${d}`];
                                             const isWe = isWeekend(inputYear, inputMonth, d);
@@ -323,7 +357,7 @@
 
         const ResultView = ({
             staff, loadedDate, inputMonth, inputYear, schedule, setSchedule, stats, calculateStats,
-            saveToLocal, setActiveTab, generateSchedule, daysInMonth, constraints
+            saveToLocal, setActiveTab, generateSchedule, daysInMonth, constraints, shiftTargets
         }) => {
             const tableRef = useRef(null);
             const [isDownloading, setIsDownloading] = useState(false);
@@ -332,7 +366,6 @@
             const displayYear = loadedDate ? loadedDate.year : inputYear;
             const displayMonth = loadedDate ? loadedDate.month : inputMonth;
 
-            // İndirme fonksiyonu ResultView içine taşındı ki tableRef doğru DOM elementini bulabilsin.
             const downloadImage = () => {
                 if (tableRef.current && window.html2canvas) {
                     setIsDownloading(true);
@@ -346,7 +379,6 @@
                     const clone = originalTable.cloneNode(true);
                     const targetWidth = 1600; 
                     
-                    // Klonun stilleri
                     clone.style.position = 'fixed'; 
                     clone.style.top = '-10000px'; 
                     clone.style.left = '0'; 
@@ -355,7 +387,6 @@
                     clone.style.backgroundColor = '#ffffff'; 
                     clone.style.padding = '40px'; 
                     
-                    // Inputları div ile değiştir, böylece canvas input içini okuyabilir
                     const originalInputs = originalTable.querySelectorAll('input');
                     const clonedInputs = clone.querySelectorAll('input');
                     originalInputs.forEach((origInput, index) => {
@@ -374,8 +405,7 @@
                         }
                     });
                     
-                    // Sticky elementleri sıfırla
-                    clone.querySelectorAll('.sticky').forEach(el => { el.style.position = 'static'; });
+                    clone.querySelectorAll('.sticky').forEach(el => { el.style.position = 'static'; el.style.boxShadow = 'none'; });
                     document.body.appendChild(clone);
                     
                     window.html2canvas(clone, { 
@@ -436,7 +466,8 @@
                                                     </th>
                                                 )
                                             })}
-                                            <th className="th-cell w-10 bg-teal-100 text-teal-900 border border-gray-600">Nöbet</th>
+                                            <th className="th-cell w-10 bg-teal-100 text-teal-900 border border-gray-600">Hedef</th>
+                                            <th className="th-cell w-10 bg-teal-100 text-teal-900 border border-gray-600">Gerçekleşen</th>
                                             <th className="th-cell w-10 bg-teal-100 text-teal-900 border border-gray-600">Saat</th>
                                         </tr>
                                     </thead>
@@ -465,14 +496,21 @@
                                                                     setSchedule(newSched); 
                                                                     calculateStats(newSched); 
                                                                     if(loadedDate) { 
-                                                                        saveToLocal({ staff, year: loadedDate.year, month: loadedDate.month, daysInMonth: daysInMonth, constraints, schedule: newSched }); 
+                                                                        saveToLocal({ staff, year: loadedDate.year, month: loadedDate.month, daysInMonth: daysInMonth, constraints, schedule: newSched, shiftTargets }); 
                                                                     } 
                                                                 }} />
                                                             </td>
                                                         );
                                                     })}
-                                                    <td className="td-cell text-center font-bold bg-teal-50 text-black border border-gray-400">{personStats.shifts}</td>
-                                                    <td className="td-cell text-center font-bold bg-teal-50 text-black border border-gray-400">{personStats.totalHours}</td>
+                                                    <td className="td-cell text-center font-bold bg-teal-50 text-gray-500 border border-gray-400">
+                                                        {shiftTargets[person] !== undefined && shiftTargets[person] !== '' ? shiftTargets[person] : 'Oto'}
+                                                    </td>
+                                                    <td className="td-cell text-center font-bold bg-teal-100 text-black border border-gray-400">
+                                                        {personStats.shifts}
+                                                    </td>
+                                                    <td className="td-cell text-center font-bold bg-teal-50 text-black border border-gray-400">
+                                                        {personStats.totalHours}
+                                                    </td>
                                                 </tr>
                                             );
                                         })}
@@ -481,10 +519,9 @@
                                             {resultDays.map(d => {
                                                 let count = 0;
                                                 staff.forEach(p => { if(schedule[`${p}_${d}`] === '24') count++; });
-                                                // KONTROL 7'YE GÖRE ÇALIŞIR
                                                 return (<td key={d} className={`td-cell text-center border border-gray-600 ${count !== SHIFTS_PER_DAY ? 'bg-red-500 text-white' : 'bg-teal-700 text-white'}`}>{count}</td>)
                                             })}
-                                            <td colSpan="2" className="td-cell border border-gray-600 bg-gray-800"></td>
+                                            <td colSpan="3" className="td-cell border border-gray-600 bg-gray-800"></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -515,6 +552,7 @@
             const [constraints, setConstraints] = useState({}); 
             const [schedule, setSchedule] = useState({}); 
             const [stats, setStats] = useState({});
+            const [shiftTargets, setShiftTargets] = useState({}); 
             const [activeTab, setActiveTab] = useState('settings'); 
             const [showClearConfirm, setShowClearConfirm] = useState(false); 
             const fileInputRef = useRef(null);
@@ -576,7 +614,7 @@
                     return newList;
                 });
                 if (loadedDate && `${loadedDate.year}-${loadedDate.month}` === id) {
-                    setLoadedDate(null); setSchedule({}); setConstraints({}); setActiveTab('settings');
+                    setLoadedDate(null); setSchedule({}); setConstraints({}); setShiftTargets({}); setActiveTab('settings');
                 }
                 setProjectToDelete(null);
             };
@@ -585,6 +623,7 @@
                 setStaff(project.staff.sort((a, b) => a.localeCompare(b, 'tr')));
                 setConstraints(project.constraints || {});
                 setSchedule(project.schedule || {});
+                setShiftTargets(project.shiftTargets || {}); 
                 setLoadedDate({ month: project.month, year: project.year });
                 setInputMonth(project.month);
                 setInputYear(project.year);
@@ -660,26 +699,18 @@
                 let standardStaffList = [];
 
                 staff.forEach(p => {
-                    let leaveCount = 0;
-                    for(let d=1; d<=targetDays; d++){
-                        if(constraints[`${p}_${d}`] === 'İ') leaveCount++;
-                    }
-                    let target = null;
-                    if (leaveCount >= 10) target = 5;
-                    else if (leaveCount >= 5) target = 7;
-                    else if (leaveCount >= 3) target = 8;
-                    
                     let historyScore = 0;
                     if (prevProject && previousMonthStats[p]) {
                         historyScore = previousMonthAvg - previousMonthStats[p].shifts;
                     }
 
-                    if (target !== null) {
-                        nurseAvailability[p] = { targetShifts: target, isFixed: true, historyScore: 0 };
-                        totalFixedShifts += target;
+                    const targetStr = shiftTargets[p];
+                    if (targetStr !== undefined && targetStr !== '' && !isNaN(targetStr)) {
+                        nurseAvailability[p] = { targetShifts: parseInt(targetStr), isFixed: true, historyScore: 0 };
+                        totalFixedShifts += parseInt(targetStr);
                     } else {
                         standardStaffList.push(p);
-                        nurseAvailability[p] = { isFixed: false, historyScore: historyScore };
+                        nurseAvailability[p] = { targetShifts: 0, isFixed: false, historyScore: historyScore };
                     }
                 });
 
@@ -774,7 +805,7 @@
 
                 setSchedule(newSchedule);
                 setLoadedDate({ month: targetMonth, year: targetYear });
-                saveToLocal({ staff, year: targetYear, month: targetMonth, daysInMonth: targetDays, constraints, schedule: newSchedule });
+                saveToLocal({ staff, year: targetYear, month: targetMonth, daysInMonth: targetDays, constraints, schedule: newSchedule, shiftTargets });
                 setActiveTab('result');
             };
 
@@ -782,7 +813,7 @@
                 const saveYear = loadedDate ? loadedDate.year : inputYear;
                 const saveMonth = loadedDate ? loadedDate.month : inputMonth;
                 const saveDays = loadedDate ? new Date(saveYear, saveMonth + 1, 0).getDate() : daysInMonth;
-                const projectData = { version: "1.0", date: new Date().toISOString(), staff, year: saveYear, month: saveMonth, daysInMonth: saveDays, constraints, schedule };
+                const projectData = { version: "1.0", date: new Date().toISOString(), staff, year: saveYear, month: saveMonth, daysInMonth: saveDays, constraints, schedule, shiftTargets };
                 const now = new Date();
                 const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}`;
                 const fileName = `Cocuk Acil ${dateStr}.json`;
@@ -811,6 +842,7 @@
                         if (data.daysInMonth) setDaysInMonth(data.daysInMonth);
                         if (data.constraints) setConstraints(data.constraints);
                         if (data.schedule) setSchedule(data.schedule);
+                        if (data.shiftTargets) setShiftTargets(data.shiftTargets); else setShiftTargets({}); 
                         saveToLocal(data);
                         alert("Proje başarıyla yüklendi!");
                     } catch (error) { console.error(error); alert("Dosya formatı hatalı."); }
@@ -823,6 +855,13 @@
                 let newStaff = staff.map(s => s === oldName ? newName : s);
                 newStaff.sort((a, b) => a.localeCompare(b, 'tr'));
                 setStaff(newStaff);
+                
+                if(shiftTargets[oldName] !== undefined) {
+                    const newTargets = {...shiftTargets};
+                    newTargets[newName] = newTargets[oldName];
+                    delete newTargets[oldName];
+                    setShiftTargets(newTargets);
+                }
             };
 
             const addStaff = () => {
@@ -832,17 +871,23 @@
             
             const removeStaff = (nameToRemove) => {
                 setStaff(staff.filter(s => s !== nameToRemove));
+                
+                if(shiftTargets[nameToRemove] !== undefined) {
+                    const newTargets = {...shiftTargets};
+                    delete newTargets[nameToRemove];
+                    setShiftTargets(newTargets);
+                }
             };
 
             return (
                 <div className="max-w-full mx-auto p-2 md:p-6 font-sans bg-gray-50 min-h-screen">
                     <header className="flex items-center justify-center mb-6">
                         <div className="bg-teal-600 text-white p-3 rounded-full shadow-lg mr-3 transform hover:scale-110 transition"><i className="fas fa-user-nurse fa-2x"></i></div>
-                        <div><h1 className="text-2xl md:text-3xl font-bold text-gray-800 tracking-tight">Nöbetmatik v1.4</h1><p className="text-gray-500 text-sm font-medium">Çocuk Acil Servis Otomasyonu</p></div>
+                        <div><h1 className="text-2xl md:text-3xl font-bold text-gray-800 tracking-tight">Nöbetmatik v1.5</h1><p className="text-gray-500 text-sm font-medium">Manuel Hedef ve Adaletli Dağıtım Sistemi</p></div>
                     </header>
                     {activeTab === 'settings' && <SettingsPanel {...{ staff, inputYear, setInputYear, inputMonth, setInputMonth, loadedDate, savedProjects, loadProject, saveProject, fileInputRef, schedule, handleDeleteClick, confirmDeleteProject, cancelDeleteProject, projectToDelete, loadFromSaved, handleStaffUpdate, removeStaff, addStaff, setActiveTab }} />}
-                    {activeTab === 'constraints' && <ConstraintGrid {...{ staff, inputYear, inputMonth, daysInMonth, constraints, toggleConstraint, clearConstraints, showClearConfirm, setShowClearConfirm, setActiveTab, generateSchedule }} />}
-                    {activeTab === 'result' && <ResultView {...{ staff, loadedDate, inputMonth, inputYear, schedule, setSchedule, stats, calculateStats, saveToLocal, setActiveTab, generateSchedule, daysInMonth, constraints }} />}
+                    {activeTab === 'constraints' && <ConstraintGrid {...{ staff, inputYear, inputMonth, daysInMonth, constraints, toggleConstraint, clearConstraints, showClearConfirm, setShowClearConfirm, setActiveTab, generateSchedule, shiftTargets, setShiftTargets }} />}
+                    {activeTab === 'result' && <ResultView {...{ staff, loadedDate, inputMonth, inputYear, schedule, setSchedule, stats, calculateStats, saveToLocal, setActiveTab, generateSchedule, daysInMonth, constraints, shiftTargets }} />}
                 </div>
             );
         }
