@@ -531,7 +531,8 @@
                                         <div className="flex items-center mb-1"><span className="w-6 font-black text-center mr-2 text-black text-sm">24</span> : 24 Saat Nöbet</div>
                                         <div className="flex items-center mb-1"><span className="w-6 font-bold text-center mr-2 text-red-600">İ</span> : İzinli / Yıllık İzin</div>
                                         <div className="flex items-center mb-1"><span className="w-6 font-bold text-center mr-2 text-teal-700">N</span> : Kesin Nöbet (İstek)</div>
-                                        <div className="flex items-center"><span className="w-6 font-bold text-center mr-2 text-gray-400">X</span> : Nöbet İstemiyor</div>
+                                        <div className="flex items-center mb-1"><span className="w-6 font-bold text-center mr-2 text-gray-400">X</span> : Nöbet İstemiyor</div>
+                                        <div className="flex items-center mt-2 pt-2 border-t border-gray-300 text-gray-600 italic font-semibold">Hedefi el ile girilenler limitini KESİNLİKLE aşmaz.</div>
                                     </div>
                                 </div>
                             </div>
@@ -764,8 +765,34 @@
                         if (constraint === 'X' || constraint === 'İ') return false;
                         if (newSchedule[`${person}_${day-1}`] === '24') return false;
                         if (constraints[`${person}_${day+1}`] === 'N') return false; 
+                        
+                        // KESİN KOTA KONTROLÜ
+                        if (nurseState[person].shiftCount >= nurseAvailability[person].targetShifts) {
+                            return false;
+                        }
+
                         return true;
                     });
+
+                    const needed = SHIFTS_PER_DAY - assignedToday.length;
+
+                    // OTO İÇİN ESNEKLİK PAYI
+                    if (candidates.length < needed) {
+                        let fallbackCandidates = staff.filter(person => {
+                            if (assignedToday.includes(person)) return false;
+                            if (candidates.includes(person)) return false; 
+                            const constraint = constraints[`${person}_${day}`];
+                            if (constraint === 'X' || constraint === 'İ') return false;
+                            if (newSchedule[`${person}_${day-1}`] === '24') return false;
+                            if (constraints[`${person}_${day+1}`] === 'N') return false; 
+                            
+                            // MANUEL HEDEF GİRİLDİYSE ASLA VE ASLA LİMİTİ DELME
+                            if (nurseAvailability[person].isFixed) return false;
+                            
+                            return true;
+                        });
+                        candidates = [...candidates, ...fallbackCandidates];
+                    }
 
                     candidates = shuffleArray(candidates);
 
@@ -783,7 +810,6 @@
                         return (stateA.lastShiftDay - stateB.lastShiftDay); 
                     });
 
-                    const needed = SHIFTS_PER_DAY - assignedToday.length;
                     for (let i = 0; i < needed; i++) {
                         if (candidates[i]) {
                             const p = candidates[i];
@@ -883,7 +909,7 @@
                 <div className="max-w-full mx-auto p-2 md:p-6 font-sans bg-gray-50 min-h-screen">
                     <header className="flex items-center justify-center mb-6">
                         <div className="bg-teal-600 text-white p-3 rounded-full shadow-lg mr-3 transform hover:scale-110 transition"><i className="fas fa-user-nurse fa-2x"></i></div>
-                        <div><h1 className="text-2xl md:text-3xl font-bold text-gray-800 tracking-tight">Nöbetmatik v1.5</h1><p className="text-gray-500 text-sm font-medium">Manuel Hedef ve Adaletli Dağıtım Sistemi</p></div>
+                        <div><h1 className="text-2xl md:text-3xl font-bold text-gray-800 tracking-tight">Nöbetmatik v1.5</h1><p className="text-gray-500 text-sm font-medium">Katı Limitli Hedef Sistemi</p></div>
                     </header>
                     {activeTab === 'settings' && <SettingsPanel {...{ staff, inputYear, setInputYear, inputMonth, setInputMonth, loadedDate, savedProjects, loadProject, saveProject, fileInputRef, schedule, handleDeleteClick, confirmDeleteProject, cancelDeleteProject, projectToDelete, loadFromSaved, handleStaffUpdate, removeStaff, addStaff, setActiveTab }} />}
                     {activeTab === 'constraints' && <ConstraintGrid {...{ staff, inputYear, inputMonth, daysInMonth, constraints, toggleConstraint, clearConstraints, showClearConfirm, setShowClearConfirm, setActiveTab, generateSchedule, shiftTargets, setShiftTargets }} />}
